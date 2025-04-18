@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Q-ITV Badge Generator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      max-width: 600px;
+      margin: auto;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 1rem;
+    }
+    select, input {
+      padding: 0.5rem;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    .badge {
+      margin-top: 2rem;
+      display: inline-block;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      font-weight: bold;
+      font-size: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .badge-row {
+      display: flex;
+    }
+    .badge-part {
+      padding: 0.5rem 1rem;
+      color: white;
+    }
+    .api {
+      background-color: #444;
+    }
+    canvas {
+      display: none;
+    }
+    #qrcode, #jsonOutput {
+      margin-top: 2rem;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+    }
+    button {
+      margin-top: 1rem;
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Q-ITV Badge Generator</h1>
+
+  <label for="api">API Type</label>
+  <input type="text" id="api" placeholder="e.g. WFS, REST, SensorFeed" />
+
+  <label for="info">Information</label>
+  <select id="info">
+    <option>Static</option>
+    <option>Point & Line</option>
+    <option>Object</option>
+    <option>Dynamic</option>
+  </select>
+
+  <label for="time">Time</label>
+  <select id="time">
+    <option>Irregular</option>
+    <option>Monthly</option>
+    <option>Daily</option>
+    <option>Minutes</option>
+  </select>
+
+  <label for="validation">Validation</label>
+  <select id="validation">
+    <option>Unvalidated</option>
+    <option>Quantitative</option>
+    <option>Qualitative</option>
+    <option>Standardized</option>
+  </select>
+
+  <div class="badge" id="badgeDisplay"></div>
+
+  <button onclick="downloadBadge('png')">Download as PNG</button>
+  <button onclick="downloadBadge('svg')">Download as SVG</button>
+  <button onclick="downloadJSON()">Download JSON</button>
+
+  <div id="qrcode"></div>
+
+  <div id="jsonOutput">
+    <h3>Machine-readable JSON</h3>
+    <pre id="jsonText"></pre>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+  <script>
+    const api = document.getElementById('api');
+    const info = document.getElementById('info');
+    const time = document.getElementById('time');
+    const validation = document.getElementById('validation');
+    const badge = document.getElementById('badgeDisplay');
+    const jsonText = document.getElementById('jsonText');
+
+    function getColor(category, value) {
+      const colors = {
+        info: ["#d9534f", "#f0ad4e", "#5bc0de", "#5cb85c"],
+        time: ["#d9534f", "#f0ad4e", "#5bc0de", "#5cb85c"],
+        validation: ["#d9534f", "#f0ad4e", "#5bc0de", "#5cb85c"]
+      };
+      const levels = {
+        info: ["Static", "Point & Line", "Object", "Dynamic"],
+        time: ["Irregular", "Monthly", "Daily
