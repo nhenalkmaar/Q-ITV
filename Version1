@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Q-ITV Badge Generator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      max-width: 600px;
+      margin: auto;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 1rem;
+    }
+    select, input {
+      padding: 0.5rem;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    .badge {
+      margin-top: 2rem;
+      display: inline-block;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      font-weight: bold;
+      font-size: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .badge-row {
+      display: flex;
+    }
+    .badge-part {
+      padding: 0.5rem 1rem;
+      color: white;
+    }
+    .api {
+      background-color: #444;
+    }
+    canvas {
+      display: none;
+    }
+    #qrcode, #jsonOutput {
+      margin-top: 2rem;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+    }
+    button {
+      margin-top: 1rem;
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Q-ITV Badge Generator</h1>
+
+  <label for="api">API Type</label>
+  <input type="text" id="api" placeholder="Bijv. WFS, REST, SensorFeed" />
+
+  <label for="info">Informatie</label>
+  <select id="info">
+    <option>Statisch</option>
+    <option>Punt & Lijn</option>
+    <option>Object</option>
+    <option>Dynamisch</option>
+  </select>
+
+  <label for="time">Tijd</label>
+  <select id="time">
+    <option>Onregelmatig</option>
+    <option>Maandelijks</option>
+    <option>Dagelijks</option>
+    <option>Minuten</option>
+  </select>
+
+  <label for="validation">Validatie</label>
+  <select id="validation">
+    <option>Ongevalideerd</option>
+    <option>Kwantitatief</option>
+    <option>Kwalitatief</option>
+    <option>Gestandaardiseerd</option>
+  </select>
+
+  <div class="badge" id="badgeDisplay"></div>
+
+  <button onclick="downloadBadge('png')">Download als PNG</button>
+  <button onclick="downloadBadge('svg')">Download als SVG</button>
+  <button onclick="downloadJSON()">Download JSON</button>
+
+  <div id="qrcode"></div>
+
+  <div id="jsonOutput">
+    <h3>Machine-leesbare JSON</h3>
+    <pre id="jsonText"></pre>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+  <script>
+    const api = document.getElementById('api');
+    const info = document.getElementById('info');
+    const time = document.getElementById('time');
+    const validation = document.getElementById('validation');
+    const badge = document.getElementById('badgeDisplay');
+    const jsonText = document.getElementById('jsonText');
+
+    function getColor(category, value) {
+      const colors = {
+        info: ["#d9534f", "#f0ad4e", "#5bc0de", "#5cb85c"],
+        time: ["#d9534f", "#f0ad4e", "#5bc0de", "#5cb85c"],
+        validation: ["#d9534f", "#f0ad4e", "#5bc0de", "#5cb85c"]
+      };
+      const levels = {
+        info: ["Statisch", "Punt & Lijn", "Object", "Dynamisch"],
+        time: ["Onregelmatig", "Maandelijks", "Dagelijks", "Minuten"],
+        validation: ["Ongevalideerd", "Kwantitatief", "Kwalitatief", "Gestandaardiseerd"]
+      };
+      const index = levels[category].indexOf(value);
+      return colors[category][index] || "#777";
+    }
+
+    function getJSONData() {
+      return {
+        api: api.value || "API",
+        informatie: info.value,
+        tijd: time.value,
+        validatie: validation.value
+      };
+    }
+
+    function updateBadge() {
+      const apiLabel = api.value || "API";
+      const infoVal = info.value;
+      const timeVal = time.value;
+      const valVal = validation.value;
+
+      const infoColor = getColor("info", infoVal);
+      const timeColor = getColor("time", timeVal);
+      const valColor = getColor("validation", valVal);
+
+      badge.innerHTML = `
+        <div class="badge-row">
+          <div class="badge-part api">${apiLabel}</div>
+          <div class="badge-part" style="background-color: ${infoColor};">I: ${infoVal}</div>
+          <div class="badge-part" style="background-color: ${timeColor};">T: ${timeVal}</div>
+          <div class="badge-part" style="background-color: ${valColor};">V: ${valVal}</div>
+        </div>
+      `;
+
+      const jsonData = getJSONData();
+      jsonText.textContent = JSON.stringify(jsonData, null, 2);
+
+      updateQRCode(jsonData);
+    }
+
+    function downloadBadge(format) {
+      html2canvas(badge).then(canvas => {
+        const link = document.createElement('a');
+        if (format === 'png') {
+          link.download = 'qitv-badge.png';
+          link.href = canvas.toDataURL('image/png');
+        } else {
+          const svgData = `
+            <svg xmlns='http://www.w3.org/2000/svg' width='400' height='50'>
+              <rect width='400' height='50' fill='#eee'/>
+              <text x='10' y='30' font-size='16' fill='black'>Q-ITV: ${api.value} | I: ${info.value} | T: ${time.value} | V: ${validation.value}</text>
+            </svg>`;
+          const blob = new Blob([svgData], { type: 'image/svg+xml' });
+          link.href = URL.createObjectURL(blob);
+          link.download = 'qitv-badge.svg';
+        }
+        link.click();
+      });
+    }
+
+    function downloadJSON() {
+      const jsonData = getJSONData();
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'qitv-label.json';
+      link.click();
+    }
+
+    function updateQRCode(json) {
+      const qrcodeContainer = document.getElementById('qrcode');
+      qrcodeContainer.innerHTML = "";
+      const text = JSON.stringify(json);
+      new QRCode(qrcodeContainer, {
+        text: text,
+        width: 128,
+        height: 128,
+      });
+    }
+
+    api.addEventListener('input', updateBadge);
+    info.addEventListener('change', updateBadge);
+    time.addEventListener('change', updateBadge);
+    validation.addEventListener('change', updateBadge);
+
+    updateBadge();
+  </script>
+</body>
+</html>
