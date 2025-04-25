@@ -42,14 +42,8 @@
     canvas {
       display: none;
     }
-    #qrcode, #jsonOutput {
+    #qrcode {
       margin-top: 2rem;
-    }
-    pre {
-      background: #f4f4f4;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      overflow-x: auto;
     }
     button {
       margin-top: 1rem;
@@ -96,11 +90,6 @@
 
   <div id="qrcode"></div>
 
-  <div id="jsonOutput">
-    <h3>Machine-readable JSON</h3>
-    <pre id="jsonText"></pre>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
   <script>
@@ -109,7 +98,6 @@
     const time = document.getElementById('time');
     const validation = document.getElementById('validation');
     const badge = document.getElementById('badgeDisplay');
-    const jsonText = document.getElementById('jsonText');
 
     function getColor(category, value) {
       const colors = {
@@ -155,8 +143,6 @@
       `;
 
       const jsonData = getJSONData();
-      jsonText.textContent = JSON.stringify(jsonData, null, 2);
-
       updateQRCode(jsonData);
     }
 
