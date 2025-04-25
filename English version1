@@ -7,7 +7,7 @@
     body {
       font-family: sans-serif;
       padding: 2rem;
-      max-width: 600px;
+      max-width: 600px; 
       margin: auto;
     }
     label {
@@ -61,7 +61,7 @@
   <h1>Q-ITV Badge Generator</h1>
 
   <label for="api">API Type</label>
-  <input type="text" id="api" placeholder="e.g. WFS, REST, SensorFeed" />
+  <input type="text" id="api" placeholder="e.g. WFS, REST, SensorFeed" required />
 
   <label for="info">Information</label>
   <select id="info">
@@ -92,6 +92,7 @@
   <button onclick="downloadBadge('png')">Download as PNG</button>
   <button onclick="downloadBadge('svg')">Download as SVG</button>
   <button onclick="downloadJSON()">Download JSON</button>
+  <button onclick="resetForm()">Reset Form</button>
 
   <div id="qrcode"></div>
 
@@ -118,4 +119,106 @@
       };
       const levels = {
         info: ["Static", "Point & Line", "Object", "Dynamic"],
-        time: ["Irregular", "Monthly", "Daily
+        time: ["Irregular", "Monthly", "Daily", "Minutes"],
+        validation: ["Unvalidated", "Quantitative", "Qualitative", "Standardized"]
+      };
+      const index = levels[category].indexOf(value);
+      return colors[category][index] || "#777";
+    }
+
+    function getJSONData() {
+      return {
+        api: api.value || "API",
+        information: info.value,
+        time: time.value,
+        validation: validation.value
+      };
+    }
+
+    function updateBadge() {
+      const apiLabel = api.value || "API";
+      const infoVal = info.value;
+      const timeVal = time.value;
+      const valVal = validation.value;
+
+      const infoColor = getColor("info", infoVal);
+      const timeColor = getColor("time", timeVal);
+      const valColor = getColor("validation", valVal);
+
+      badge.innerHTML = `
+        <div class="badge-row">
+          <div class="badge-part api">${apiLabel}</div>
+          <div class="badge-part" style="background-color: ${infoColor};">I: ${infoVal}</div>
+          <div class="badge-part" style="background-color: ${timeColor};">T: ${timeVal}</div>
+          <div class="badge-part" style="background-color: ${valColor};">V: ${valVal}</div>
+        </div>
+      `;
+
+      const jsonData = getJSONData();
+      jsonText.textContent = JSON.stringify(jsonData, null, 2);
+
+      updateQRCode(jsonData);
+    }
+
+    function downloadBadge(format) {
+      if (!api.value.trim()) {
+        alert("Please enter an API type before downloading the badge.");
+        return;
+      }
+
+      html2canvas(badge).then(canvas => {
+        const link = document.createElement('a');
+        if (format === 'png') {
+          link.download = 'qitv-badge.png';
+          link.href = canvas.toDataURL('image/png');
+        } else {
+          const svgData = `
+            <svg xmlns='http://www.w3.org/2000/svg' width='400' height='50'>
+              <rect width='400' height='50' fill='#eee'/>
+              <text x='10' y='30' font-size='16' fill='black'>Q-ITV: ${api.value} | I: ${info.value} | T: ${time.value} | V: ${validation.value}</text>
+            </svg>`;
+          const blob = new Blob([svgData], { type: 'image/svg+xml' });
+          link.href = URL.createObjectURL(blob);
+          link.download = 'qitv-badge.svg';
+        }
+        link.click();
+      });
+    }
+
+    function downloadJSON() {
+      const jsonData = getJSONData();
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'qitv-label.json';
+      link.click();
+    }
+
+    function updateQRCode(json) {
+      const qrcodeContainer = document.getElementById('qrcode');
+      qrcodeContainer.innerHTML = "";
+      const text = JSON.stringify(json);
+      new QRCode(qrcodeContainer, {
+        text: text,
+        width: 128,
+        height: 128,
+      });
+    }
+
+    function resetForm() {
+      api.value = "";
+      info.selectedIndex = 0;
+      time.selectedIndex = 0;
+      validation.selectedIndex = 0;
+      updateBadge();
+    }
+
+    api.addEventListener('input', updateBadge);
+    info.addEventListener('change', updateBadge);
+    time.addEventListener('change', updateBadge);
+    validation.addEventListener('change', updateBadge);
+
+    updateBadge();
+  </script>
+</body>
+</html>
